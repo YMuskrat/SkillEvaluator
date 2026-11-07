@@ -7,6 +7,7 @@ on:
     paths:
       - .verification/live-smoke.sh
       - .verification/live_smoke.py
+      - .verification/model_tool_preflight.py
       - .github/workflows/interaction-live-verification.yml
   workflow_dispatch:
 
