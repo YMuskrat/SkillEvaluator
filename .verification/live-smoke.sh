@@ -24,6 +24,16 @@ export LD_LIBRARY_PATH="$(dirname "$llama_server")${LD_LIBRARY_PATH:+:$LD_LIBRAR
 # Harbor currently installs OpenCode @latest. Refuse drift and verify the
 # actually executed version from each retained trajectory after the run.
 test "$(npm view opencode-ai@latest version)" = 1.19.5
+# Compose 5.7 handles image HEALTHCHECK NONE correctly during up --wait.
+# The older runner image's Compose 2.38 treats disabled checks as missing.
+compose_path="$HOME/.docker/cli-plugins/docker-compose"
+mkdir -p "$(dirname "$compose_path")"
+curl --fail --location --retry 3 --max-time 300 \
+  https://github.com/docker/compose/releases/download/v5.7.0/docker-compose-linux-x86_64 \
+  -o "$compose_path"
+printf '%s  %s\n' 7758048ad38e580f22559603312874fec8bb638d021a9e64182385fc17cc12a2 "$compose_path" | sha256sum --check
+chmod 755 "$compose_path"
+docker compose version
 docker info > "$smoke_root/artifacts/docker-info.txt"
 gateway=$(docker network inspect bridge --format '{{(index .IPAM.Config 0).Gateway}}')
 test -n "$gateway"
@@ -59,6 +69,7 @@ test "$healthy" = true
 # runner. The required nonempty provider field is a local placeholder only.
 export SKILL_EVAL_LLM_PROVIDER=openai-compatible
 export SKILL_EVAL_LLM_BASE_URL="http://$gateway:8080/v1"
+export SKILL_EVAL_MODEL_CATALOG_ALLOW_HTTP_HOSTS="$gateway"
 export SKILL_EVAL_LLM_API_KEY=local-model-no-auth
 export SKILL_EVAL_LLM_MODEL=local-qwen
 
