@@ -3074,6 +3074,147 @@
             }
           ]
         },
+        "interactions": {
+          "params": [
+            {
+              "name": "skill_paths",
+              "opts": [
+                "skill_paths"
+              ],
+              "param_type": "argument",
+              "required": true,
+              "type": "directory"
+            },
+            {
+              "name": "agents",
+              "opts": [
+                "--agents",
+                "-a"
+              ],
+              "param_type": "option",
+              "type": "text"
+            },
+            {
+              "choices": [
+                "docker",
+                "kata",
+                "daytona",
+                "e2b",
+                "modal",
+                "runloop",
+                "langsmith",
+                "ec2",
+                "gke",
+                "ack",
+                "openshift",
+                "novita",
+                "apple-container",
+                "singularity",
+                "islo",
+                "tensorlake",
+                "cwsandbox",
+                "wandb",
+                "use-computer",
+                "blaxel",
+                "beam",
+                "skypilot",
+                "hyperbrowser",
+                "vercel",
+                "runta",
+                "mosaic",
+                "local"
+              ],
+              "default": "docker",
+              "name": "env_mode",
+              "opts": [
+                "--env-mode"
+              ],
+              "param_type": "option"
+            },
+            {
+              "default": "1",
+              "name": "n_attempts",
+              "opts": [
+                "--n-attempts"
+              ],
+              "param_type": "option",
+              "type": "integer range"
+            },
+            {
+              "default": "4",
+              "name": "n_concurrent",
+              "opts": [
+                "--n-concurrent"
+              ],
+              "param_type": "option",
+              "type": "integer range"
+            },
+            {
+              "name": "model",
+              "opts": [
+                "--model"
+              ],
+              "param_type": "option",
+              "type": "text"
+            },
+            {
+              "multiple": true,
+              "name": "agent_model",
+              "opts": [
+                "--agent-model"
+              ],
+              "param_type": "option",
+              "type": "text"
+            },
+            {
+              "default": "goal_accuracy",
+              "name": "metric",
+              "opts": [
+                "--metric"
+              ],
+              "param_type": "option",
+              "type": "text"
+            },
+            {
+              "choices": [
+                "default",
+                "default_plus_custom",
+                "custom_only"
+              ],
+              "name": "grading_mode",
+              "opts": [
+                "--grading-mode"
+              ],
+              "param_type": "option"
+            },
+            {
+              "name": "output_dir",
+              "opts": [
+                "--results-dir"
+              ],
+              "param_type": "option",
+              "type": "directory"
+            },
+            {
+              "name": "timeout_multiplier",
+              "opts": [
+                "--timeout-multiplier"
+              ],
+              "param_type": "option",
+              "type": "float range"
+            },
+            {
+              "multiple": true,
+              "name": "environment_kwarg",
+              "opts": [
+                "--ek",
+                "--environment-kwarg"
+              ],
+              "param_type": "option",
+              "type": "text"
+            }
+          ]
+        },
         "select-decoys": {
           "params": [
             {

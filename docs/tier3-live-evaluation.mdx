@@ -623,6 +623,76 @@ baseline arm must stay isolated from skill-owned setup commands. `validate`
 does not accept `--skip-with-skill`, so a baseline-only run can never satisfy a
 Tier 3 gate.
 
+## Evaluate skill interactions
+
+Use `tier3 interactions` to evaluate 2–20 skills individually and as a
+group on the same task suite. The first skill supplies the existing evaluation
+cases, fixtures, configuration, and grader; review that suite for applicability
+to the selected skills before running. The command does not generate cases.
+This initial workflow requires `evals/evals.*` in the first skill; native
+Harbor task sources are not supported. Its configuration must not declare
+additional workspace includes, a decoy manifest, or pre-agent setup commands.
+The selected positional skills define the complete skill group.
+Use the full suite without `harbor.max_cases`; the initial report reader supports
+at most 512 case attempts per configuration (cases multiplied by attempts).
+
+```bash title="Measure a pair of skills"
+skillevaluator tier3 interactions ./skills/skill-a ./skills/skill-b \
+  --agents codex --env-mode docker --n-attempts 3
+```
+
+For two skills, the configurations are no skills, A only, B only, and A+B. The
+interaction score is:
+
+```text
+I(A, B) = P(A, B) - P(A) - P(B) + P(empty)
+```
+
+`P` is the selected outcome score, `goal_accuracy` by default. Positive
+interaction means the combined lift exceeds the sum of the individual lifts;
+negative means it falls short; zero means the effects are additive. For
+example, scores of 0.50 without skills, 0.75 for A, 0.70 for B, and 0.65 for
+A+B give combined lift +0.15 and interaction -0.30. Negative interaction can
+coexist with positive combined lift.
+
+For three or more skills, the command evaluates the baseline, each skill
+alone, and the full selected group. It reports total departure from additive
+individual gains:
+
+```text
+I(S) = [P(S) - P(empty)] - sum(P(skill) - P(empty) for skill in S)
+```
+
+This group score includes interactions of different orders; it does not
+separately attribute each pair or higher-order effect. A group of N skills
+requires N+2 configurations. Trial volume is therefore eval cases × agents ×
+attempts × (N+2), with additional verifier-model calls when standard grading
+is enabled.
+
+Every configuration uses one frozen evaluation source and frozen runtime
+skill copies, with the same selected model and attempt budget. A case is
+compared only when every configuration supplies the requested scored
+attempts and the selected standard metric uses the same known judge. Missing,
+inapplicable, or incomparable evidence makes the interaction result
+incomplete; unavailable scores appear as N/A rather than zero. The command
+exits `1` for an incomplete evaluation. A completed negative interaction
+exits `0`.
+
+Terminal output lists baseline, individual, and combined scores, combined
+lift, and interaction. Each run writes `interaction.json`, `interaction.html`,
+and the per-configuration evidence under a unique `interaction_*` directory.
+Use `--results-dir` to choose the results root. To use an invariant
+custom outcome grader from the first skill's suite, select its metric:
+
+```bash title="Use a custom task-success score"
+skillevaluator tier3 interactions ./skills/skill-a ./skills/skill-b \
+  --grading-mode custom_only --metric custom:task_success
+```
+
+Use the same custom grading rule for every configuration, including the
+no-skill baseline. All options are listed in
+[the interaction command reference](cli-reference.mdx#tier3-interactions).
+
 ## How standard grading judges a trial
 
 With `default` or `default_plus_custom` grading, SkillEvaluator's verifier

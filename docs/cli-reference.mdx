@@ -32,6 +32,7 @@ commands referenced below.
 | [similarity-check](#similarity-check) | Detect duplicate content across a collection | Embeddings provider key |
 | [tier3 evaluate](#tier3-evaluate) | Run Tier 3 live agent evaluation | Provider key plus a credential the selected agents can use (one `NVIDIA_API_KEY` covers both on NVIDIA Build), backend (Docker by default) |
 | [tier3 select-decoys](#tier3-select-decoys) | Save a reproducible set of neighboring skills for group evaluation | Local description-embedding catalog, skill collection, embeddings provider key |
+| [tier3 interactions](#tier3-interactions) | Measure individual and combined skill scores and their interaction | At least two skills, an existing shared eval suite in the first skill, provider credentials, and a supported agent/backend |
 | [create-eval-dataset](#create-eval-dataset) | Generate synthetic eval datasets | LLM provider key (none with `--no-llm`) |
 | [init-custom-grader](#init-custom-grader) | Scaffold a bring-your-own-grader starter | Nothing |
 | [init-harbor-task](#init-harbor-task) | Scaffold a bring-your-own-task Harbor starter | Nothing |
@@ -164,7 +165,7 @@ pipeline.
 | --- | --- |
 | `tier1` | `validate`, `quality-check`, `rubric-eval`, `security-scan`, `pii-scan`, `lint-scripts` |
 | `tier2` | `context-optimization-check`, `dedup-scan`, `similarity-check` |
-| `tier3` | `evaluate`, `select-decoys`, `create-eval-dataset`, `init-custom-grader`, `init-harbor-task`, `doctor`, `view`, `compare`, `feedback`, `validate`, `harbor-view` |
+| `tier3` | `evaluate`, `interactions`, `select-decoys`, `create-eval-dataset`, `init-custom-grader`, `init-harbor-task`, `doctor`, `view`, `compare`, `feedback`, `validate`, `harbor-view` |
 
 `health-check` and [models](#models) are top-level only. The expert commands
 [tier3 evaluate](#tier3-evaluate), [tier3 select-decoys](#tier3-select-decoys),
@@ -463,6 +464,51 @@ skill's parent directory. Evaluation validates and reuses the selection
 without contacting the embedding provider. See
 [Select a reproducible decoy set](agents-and-sandboxes.mdx#select-a-reproducible-decoy-set)
 for a complete example and the limits of similarity-based selection.
+
+## tier3 interactions
+
+Evaluate 2–20 selected skills against one existing task suite: no
+skills, each skill individually, and the full group. The first skill supplies
+the evaluation source and grader for every configuration. No dataset is
+generated. The command uses the same Tier 3 provider, agent, and backend
+prerequisites as `tier3 evaluate`. This initial workflow requires
+`evals/evals.*` in the first skill; native Harbor tasks, configured background
+workspace includes/decoys, and pre-agent setup commands are rejected.
+The suite must not set `harbor.max_cases`, and cases multiplied by attempts
+must not exceed 512 per configuration.
+
+```bash title="Calculate skill interaction"
+skillevaluator tier3 interactions ./skills/skill-a ./skills/skill-b \
+  --agents codex --n-attempts 3 --results-dir ./interaction-results
+```
+
+| Flag | Default | Effect |
+| --- | --- | --- |
+| `-a, --agents TEXT` | provider-native | Comma-separated agents to evaluate, with the same selection in every configuration. |
+| `--env-mode` | `docker` | Execution backend; accepts the same environment modes as `tier3 evaluate`. |
+| `--n-attempts INTEGER` | `1` | Fixed attempts per case and configuration; minimum `1`. |
+| `--n-concurrent INTEGER` | `4` | Concurrent cases per agent; minimum `1`. |
+| `--model TEXT` | configured model | Shared agent-model override. |
+| `--agent-model TEXT` | none | Per-agent `AGENT=MODEL` override; repeatable. |
+| `--metric TEXT` | `goal_accuracy` | Outcome score used in the interaction equation: `goal_accuracy` or `custom:NAME`. |
+| `--grading-mode [default\|default_plus_custom\|custom_only]` | first skill's configuration | Grading mode for every configuration. |
+| `--results-dir DIRECTORY` | first skill's `evals/results` | Root for the interaction run, report, and configuration evidence. |
+| `--timeout-multiplier FLOAT` | first skill's configuration | Shared finite positive Harbor timeout multiplier. |
+| `--environment-kwarg`, `--ek` | none | Operator-only backend `KEY=VALUE` constructor option; repeatable, with the same restrictions as `tier3 evaluate`. |
+
+For a pair, the interaction is `P(A+B) - P(A) - P(B) + P(empty)`. For a
+larger group, it is the group's lift above baseline minus the sum of the
+individual lifts. Positive, negative, and zero scores describe departure
+from additive individual gains. Negative interaction does not necessarily
+mean performance below baseline.
+
+Terminal output and the saved `interaction.json` / `interaction.html` reports
+show the selected outcome scores, combined lift, and interaction. Every configuration must provide the
+requested comparable attempts; an incomplete matrix exits `1` and has no
+aggregate interaction score. Completed positive, negative, and zero
+interactions exit `0`. See
+[Evaluate skill interactions](tier3-live-evaluation.mdx#evaluate-skill-interactions)
+for the equations and an example.
 
 ## tier3 evaluate
 

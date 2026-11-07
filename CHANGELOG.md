@@ -6,6 +6,12 @@ All notable changes to SkillEvaluator are documented in this file.
 
 ### Added
 
+- `tier3 interactions` evaluates two or more skills against one fixed task
+  suite with no skills, each skill alone, and the selected group. It reports
+  baseline, individual, and combined outcome scores, combined lift, and signed
+  interaction in terminal, JSON, and HTML output. Missing or incomparable
+  attempts leave the result incomplete instead of producing a zero score.
+
 - `skills/skillevaluator/` is an agent skill for operating SkillEvaluator: it
   routes requests to the right tier, readiness check, dataset, report, or CI
   command, and ships Tier 3 evaluation cases for itself. A test keeps every
