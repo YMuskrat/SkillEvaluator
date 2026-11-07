@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - test/skill-interaction-verification
+    paths-ignore:
+      - .github/workflows/interaction-verification.yml
+      - .github/workflows/interaction-live-verification.yml
+      - .verification/**
   workflow_dispatch:
 
 permissions:
