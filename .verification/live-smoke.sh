@@ -11,16 +11,16 @@ export TMPDIR="$smoke_root/tmp"
 export SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE="$smoke_root/state/output-provenance.key"
 
 llama_url=https://github.com/ggml-org/llama.cpp/releases/download/b12189/llama-b12189-bin-ubuntu-x64.tar.gz
-model_url=https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF/resolve/main/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf
+model_url=https://huggingface.co/Qwen/Qwen3-1.7B-GGUF/resolve/90862c4b9d2787eaed51d12237eafdfe7c5f6077/Qwen3-1.7B-Q8_0.gguf
 curl --fail --location --retry 3 --max-time 300 "$llama_url" -o "$smoke_root/downloads/llama.tar.gz"
 curl --fail --location --retry 3 --max-time 600 "$model_url" -o "$smoke_root/downloads/model.gguf"
 printf '%s  %s\n' c446a7ba4df3c3b1cc880a734fbff586d6d34b9cebc09e151754813b94ded8c9 "$smoke_root/downloads/llama.tar.gz" | sha256sum --check
-printf '%s  %s\n' cc324af070c2ecbfd324a30884d2f951a7ff756aba85cb811a6ec436933bb046 "$smoke_root/downloads/model.gguf" | sha256sum --check
+printf '%s  %s\n' 061b54daade076b5d3362dac252678d17da8c68f07560be70818cace6590cb1a "$smoke_root/downloads/model.gguf" | sha256sum --check
 # Use the original model author's pinned tool-aware chat template.
 curl --fail --location --retry 3 --max-time 120 \
-  https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct/raw/2e1fd397ee46e1388853d2af2c993145b0f1098a/tokenizer_config.json \
+  https://huggingface.co/Qwen/Qwen3-1.7B/raw/70d244cc86ccca08cf5af4e1e306ecf908b1ad5e/tokenizer_config.json \
   -o "$smoke_root/downloads/tokenizer_config.json"
-printf '%s  %s\n' 959e7f1d9a1b7641a6d6ce05ca97b75c7894fcb66cbe5a040406458fb1128ee4 "$smoke_root/downloads/tokenizer_config.json" | sha256sum --check
+printf '%s  %s\n' d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101 "$smoke_root/downloads/tokenizer_config.json" | sha256sum --check
 python - "$smoke_root/downloads" <<'PY'
 import json
 import sys
@@ -28,7 +28,7 @@ from pathlib import Path
 root = Path(sys.argv[1])
 (root / "qwen-tool-aware.jinja").write_text(json.loads((root / "tokenizer_config.json").read_text())["chat_template"], encoding="utf-8")
 PY
-printf '%s  %s\n' cd8e9439f0570856fd70470bf8889ebd8b5d1107207f67a5efb46e342330527f "$smoke_root/downloads/qwen-tool-aware.jinja" | sha256sum --check
+printf '%s  %s\n' a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8 "$smoke_root/downloads/qwen-tool-aware.jinja" | sha256sum --check
 tar -xzf "$smoke_root/downloads/llama.tar.gz" -C "$smoke_root/server"
 llama_server=$(find "$smoke_root/server" -type f -name llama-server -print -quit)
 test -n "$llama_server"
@@ -56,7 +56,8 @@ export no_proxy="$NO_PROXY"
 "$llama_server" --model "$smoke_root/downloads/model.gguf" \
   --host "$gateway" --port 8080 --alias local-qwen --jinja \
   --chat-template-file "$smoke_root/downloads/qwen-tool-aware.jinja" \
-  --ctx-size 32768 --parallel 1 --threads 2 --n-predict 512 --metrics \
+  --chat-template-kwargs '{"enable_thinking":false}' \
+  --ctx-size 32768 --parallel 1 --threads 4 --n-predict 512 --metrics \
   > "$smoke_root/artifacts/llama-server.log" 2>&1 &
 server_pid=$!
 cleanup() {
