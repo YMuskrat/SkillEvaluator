@@ -8,12 +8,17 @@ import json
 import math
 from pathlib import Path
 
-PROMPT = """Complete this small local file task. Use your shell tool; do not merely describe commands.
-First list /workspace/skills. Read each SKILL.md file present there, if any.
-Then write the file /workspace/answer.txt containing exactly the two digits 42 followed by one newline.
-Read the file back to check it. Finally respond with Done.
-Work only with /workspace/skills and /workspace/answer.txt. Do not use the network.
+PROMPT = """Use the bash tool to run the following shell script exactly once, then reply Done.
+Do not describe or print a tool call; actually call bash. Do not use the network.
+
+ls /workspace/skills
+for skill in /workspace/skills/*/SKILL.md; do
+    if [ -f "$skill" ]; then cat "$skill"; fi
+done
+printf '42\\n' > /workspace/answer.txt
+cat /workspace/answer.txt
 """
+
 
 GRADER = '''import json
 import os
@@ -118,6 +123,8 @@ def verify(results_root: Path, output: Path) -> None:
         completions = trajectory.get("final_metrics", {}).get("total_completion_tokens")
         _require(isinstance(completions, (int, float)) and completions > 0, "No actual generated completion tokens")
         calls = sum(len(step.get("tool_calls") or []) for step in trajectory.get("steps", []))
+        _require(calls > 0, f"No actual tool calls in {record['id']}")
+        _require(reward["custom_metrics"]["task_success"] == 1, f"File task failed in {record['id']}")
         arm_evidence.append({
             "configuration": record["id"],
             "available_skills": details["available_skills"],

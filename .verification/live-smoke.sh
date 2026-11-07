@@ -16,6 +16,19 @@ curl --fail --location --retry 3 --max-time 300 "$llama_url" -o "$smoke_root/dow
 curl --fail --location --retry 3 --max-time 600 "$model_url" -o "$smoke_root/downloads/model.gguf"
 printf '%s  %s\n' c446a7ba4df3c3b1cc880a734fbff586d6d34b9cebc09e151754813b94ded8c9 "$smoke_root/downloads/llama.tar.gz" | sha256sum --check
 printf '%s  %s\n' cc324af070c2ecbfd324a30884d2f951a7ff756aba85cb811a6ec436933bb046 "$smoke_root/downloads/model.gguf" | sha256sum --check
+# Use the original model author's pinned tool-aware chat template.
+curl --fail --location --retry 3 --max-time 120 \
+  https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct/raw/2e1fd397ee46e1388853d2af2c993145b0f1098a/tokenizer_config.json \
+  -o "$smoke_root/downloads/tokenizer_config.json"
+printf '%s  %s\n' 959e7f1d9a1b7641a6d6ce05ca97b75c7894fcb66cbe5a040406458fb1128ee4 "$smoke_root/downloads/tokenizer_config.json" | sha256sum --check
+python - "$smoke_root/downloads" <<'PY'
+import json
+import sys
+from pathlib import Path
+root = Path(sys.argv[1])
+(root / "qwen-tool-aware.jinja").write_text(json.loads((root / "tokenizer_config.json").read_text())["chat_template"], encoding="utf-8")
+PY
+printf '%s  %s\n' cd8e9439f0570856fd70470bf8889ebd8b5d1107207f67a5efb46e342330527f "$smoke_root/downloads/qwen-tool-aware.jinja" | sha256sum --check
 tar -xzf "$smoke_root/downloads/llama.tar.gz" -C "$smoke_root/server"
 llama_server=$(find "$smoke_root/server" -type f -name llama-server -print -quit)
 test -n "$llama_server"
@@ -42,6 +55,7 @@ export no_proxy="$NO_PROXY"
 
 "$llama_server" --model "$smoke_root/downloads/model.gguf" \
   --host "$gateway" --port 8080 --alias local-qwen --jinja \
+  --chat-template-file "$smoke_root/downloads/qwen-tool-aware.jinja" \
   --ctx-size 32768 --parallel 1 --threads 2 --n-predict 512 --metrics \
   > "$smoke_root/artifacts/llama-server.log" 2>&1 &
 server_pid=$!
@@ -72,6 +86,8 @@ export SKILL_EVAL_LLM_BASE_URL="http://$gateway:8080/v1"
 export SKILL_EVAL_MODEL_CATALOG_ALLOW_HTTP_HOSTS="$gateway"
 export SKILL_EVAL_LLM_API_KEY=local-model-no-auth
 export SKILL_EVAL_LLM_MODEL=local-qwen
+
+PREFLIGHT_ARTIFACTS="$smoke_root/artifacts" python "$script_dir/model_tool_preflight.py"
 
 python "$script_dir/live_smoke.py" prepare "$smoke_root/fixtures"
 timeout --signal=TERM --kill-after=30s 24m \
