@@ -15,7 +15,7 @@ with urlopen(props_base + '/props', timeout=30) as response:
 templates = json.dumps({key: value for key, value in props.items() if 'template' in key})
 assert '<tool_call>' in templates, 'No native tools-aware template reported by llama.cpp'
 
-for mode in ('forced', 'auto'):
+for mode in ('auto', 'required'):
     payload = {
         'model': 'local-qwen',
         'messages': [
@@ -35,7 +35,7 @@ for mode in ('forced', 'auto'):
                 },
             },
         }],
-        'tool_choice': {'type': 'function', 'function': {'name': 'smoke_echo'}} if mode == 'forced' else 'auto',
+        'tool_choice': mode,
         'temperature': 0,
         'max_tokens': 128,
         'stream': False,
