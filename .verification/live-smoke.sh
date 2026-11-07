@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # Test-only runner: use a real downloaded model, the real agent, and Docker.
 set -euo pipefail
+umask 077
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 smoke_root=${INTERACTION_SMOKE_ROOT:-${RUNNER_TEMP:?RUNNER_TEMP must be set}/skill-interaction-live}
 mkdir -p "$smoke_root/downloads" "$smoke_root/server" "$smoke_root/artifacts" "$smoke_root/tmp" "$smoke_root/state"
+chmod 700 "$smoke_root/state"
 export TMPDIR="$smoke_root/tmp"
 export SKILLEVALUATOR_OUTPUT_PROVENANCE_KEY_FILE="$smoke_root/state/output-provenance.key"
 
