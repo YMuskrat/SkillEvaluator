@@ -1,0 +1,40 @@
+name: Skill interaction live verification
+
+on:
+  push:
+    branches:
+      - test/skill-interaction-verification
+    paths:
+      - .verification/live-smoke.sh
+      - .verification/live_smoke.py
+      - .github/workflows/interaction-live-verification.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-interactions:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      INTERACTION_SMOKE_ROOT: ${{ runner.temp }}/skill-interaction-live
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3
+        with:
+          version: "0.11.27"
+      - name: Install the evaluated checkout
+        run: uv sync --python 3.13 --extra tier3 --extra dev --locked
+      - name: Run real local-model interaction evaluation
+        run: uv run --no-sync bash .verification/live-smoke.sh
+      - name: Upload retained evaluation evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: skill-interaction-live-evidence
+          path: ${{ runner.temp }}/skill-interaction-live/artifacts
+          if-no-files-found: error
+          retention-days: 7
